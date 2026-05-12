@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { isPublicMarketingSite } from './lib/publicSite';
 import { 
   TrendingUp, 
   Users, 
@@ -66,6 +67,7 @@ const revenueData = [
 
 export default function App() {
   useTheme();
+  const isPublic = useMemo(() => isPublicMarketingSite(), []);
   const [view, setView] = useState<'hub' | 'admin' | 'tenant'>('hub');
   const [adminTab, setAdminTab] = useState<'portfolio' | 'rent-roll' | 'maintenance' | 'marketing' | 'community' | 'ceo' | 'sfplus' | 'marketmax' | 'vendors' | 'concerns'>('portfolio');
   const [rentRollUnlocked, setRentRollUnlocked] = useState(false);
@@ -73,9 +75,18 @@ export default function App() {
   const [showOwnerVision, setShowOwnerVision] = useState(false);
   const [heroImageFailed, setHeroImageFailed] = useState(false);
 
+  // Defense in depth: if the admin view is ever entered on a public
+  // marketing host (e.g. via persisted state, deep link, or React
+  // DevTools), snap back to the Hub before any admin markup paints.
+  useEffect(() => {
+    if (isPublic && view === 'admin') {
+      setView('hub');
+    }
+  }, [isPublic, view]);
+
   return (
     <div className={`min-h-screen font-sans selection:bg-app-accent/30 transition-colors duration-700`}>
-      {view === 'admin' && <ShimmerBackground />}
+      {view === 'admin' && !isPublic && <ShimmerBackground />}
       
       <AnimatePresence>
         {showOwnerVision && (
@@ -110,7 +121,7 @@ export default function App() {
 
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            {view === 'admin' && (
+            {view === 'admin' && !isPublic && (
               <button 
                 onClick={() => setShowOwnerVision(true)}
                 className="hidden lg:flex items-center gap-2 px-4 py-1.5 bg-app-accent/10 border border-app-accent/20 text-app-accent text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-app-accent hover:text-white transition-all"
@@ -130,16 +141,18 @@ export default function App() {
               >
                 Hub
               </button>
-              <button 
-                onClick={() => setView('admin')}
-                className={`px-3 sm:px-4 py-1.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest rounded-full transition-all duration-300 ${
-                  view === 'admin' 
-                  ? 'bg-app-accent text-white shadow-lg' 
-                  : 'text-app-text/60 hover:text-app-text'
-                }`}
-              >
-                Admin
-              </button>
+              {!isPublic && (
+                <button
+                  onClick={() => setView('admin')}
+                  className={`px-3 sm:px-4 py-1.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest rounded-full transition-all duration-300 ${
+                    view === 'admin'
+                      ? 'bg-app-accent text-white shadow-lg'
+                      : 'text-app-text/60 hover:text-app-text'
+                  }`}
+                >
+                  Admin
+                </button>
+              )}
               <button 
                 onClick={() => setView('tenant')}
                 className={`px-3 sm:px-4 py-1.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest rounded-full transition-all duration-300 ${
@@ -709,7 +722,7 @@ export default function App() {
               </div>
             </footer>
           </motion.div>
-        ) : view === 'admin' ? (
+        ) : view === 'admin' && !isPublic ? (
           <motion.div
             key="admin"
             initial={{ opacity: 0 }}
