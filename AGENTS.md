@@ -38,3 +38,25 @@ This document tracks persistent enhancements and project-specific rules for the 
 - **Animations**: Always use `motion/react`.
 - **Styling**: Strictly Tailwind CSS.
 - **Data**: Prefer real-time patterns with `onSnapshot` if Firebase is used.
+
+## Cursor Cloud specific instructions
+
+### Services
+- **Single service**: Express.js server with Vite middleware (dev mode). Run with `npm run dev` → serves frontend + API on `http://localhost:3000`.
+- **Database**: SQLite via `better-sqlite3` (embedded, file: `rentroll_v3.db`). Created automatically on first run with seed data. No external DB service needed.
+- **Firebase/Gemini**: Optional. The app works fully without `GEMINI_API_KEY` or Firebase credentials (AI image gen and auth degrade gracefully).
+
+### Commands reference
+| Task | Command |
+|------|---------|
+| Dev server | `npm run dev` |
+| Lint (type check) | `npm run lint` |
+| Build | `npm run build` |
+| Clean | `npm run clean` |
+
+### Gotchas
+- The dev server runs Express + Vite in a single process (`tsx server.ts`). There is no separate frontend dev server.
+- The SQLite database file (`rentroll_v3.db`) is created at the workspace root on first server start. Delete it to reset to seed data.
+- `better-sqlite3` requires native addon compilation. If `npm install` fails on this package, ensure `build-essential` and `python3` are available.
+- The app has three views toggled via the top nav: **Hub** (landing page), **Admin** (property management dashboard), **Tenant** (resident portal).
+- Lint is TypeScript only (`tsc --noEmit`); there is no ESLint configured.
