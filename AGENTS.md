@@ -38,3 +38,21 @@ This document tracks persistent enhancements and project-specific rules for the 
 - **Animations**: Always use `motion/react`.
 - **Styling**: Strictly Tailwind CSS.
 - **Data**: Prefer real-time patterns with `onSnapshot` if Firebase is used.
+
+## Cursor Cloud specific instructions
+
+### Services
+- **Single service**: Express + Vite dev server on port 3000. Start with `npm run dev` (runs `tsx server.ts`).
+- **Database**: SQLite via `better-sqlite3` — embedded, file-based (`rentroll_v3.db`), auto-created with schema and seed data on first server start. No external DB needed.
+- **Firebase**: Client-side only (Firestore + Auth) for tenant portal features. Config is hardcoded in `firebase-applet-config.json`. Optional for core functionality.
+- **Gemini AI**: Optional. Set `GEMINI_API_KEY` in `.env.local` to enable AI features (CEO Briefing, image generation). App works without it.
+
+### Commands
+- **Lint**: `npm run lint` (runs `tsc --noEmit`)
+- **Build**: `npm run build` (Vite production build to `dist/`)
+- **Dev**: `npm run dev` (Express + Vite HMR on port 3000)
+- No test framework is configured.
+
+### Gotchas
+- `better-sqlite3` is a native module. If `node_modules` is deleted and reinstalled, it requires build tools (`python3`, `make`, `g++`) for native compilation.
+- The Vite build produces a large single chunk (>500 kB) — this is expected and not an error.
