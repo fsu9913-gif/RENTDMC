@@ -32,6 +32,12 @@ import {
 } from 'lucide-react';
 
 import { LeaseUpdateWalkthrough } from './LeaseUpdateWalkthrough';
+import {
+  TenantPortalLanding,
+  readStoredTenantIdentity,
+  clearStoredTenantIdentity,
+  type TenantIdentity,
+} from './TenantPortalLanding';
 import { db, auth, googleProvider } from '../firebase';
 import { doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
@@ -84,6 +90,7 @@ interface LeaseUpdate {
 }
 
 export const TenantPortal = () => {
+  const [identity, setIdentity] = useState<TenantIdentity | null>(() => readStoredTenantIdentity());
   const [activeTab, setActiveTab] = useState<'dashboard' | 'security' | 'refer' | 'settings' | 'maintenance' | 'mailbox' | 'support' | 'info-nook'>('mailbox');
   const [privacyMode, setPrivacyMode] = useState(false);
   const [settings, setSettings] = useState<UserSettings>({
@@ -110,13 +117,21 @@ export const TenantPortal = () => {
   const [rentStatus, setRentStatus] = useState<{ amount: number, last_payment: string, status: string } | null>(null);
   const [mailboxCustomizations, setMailboxCustomizations] = useState<Record<string, { color: string }>>({});
   const [selectedMailbox, setSelectedMailbox] = useState<string | null>(null);
-  const [currentUserUnit] = useState<string>('101'); // Mocked for demo
-
   const units = [
     '101', '102', '103', '104', '105', '106',
     '107', '108', '201', '202', '203', '204',
     '301', '302', '303', '304', '305', '306'
   ];
+
+  // The signed-in unit (driven by the landing's identity store) becomes
+  // the tenant's "home plate" in the mailbox view and gates which mailbox
+  // they can paint. Falls back to '101' before the landing has resolved.
+  const currentUserUnit = identity?.unit ?? '101';
+
+  const handleSwitchUnit = () => {
+    clearStoredTenantIdentity();
+    setIdentity(null);
+  };
 
   const curatedColors = [
     { name: 'Ruby Red', value: '#9B111E' },
@@ -312,30 +327,53 @@ export const TenantPortal = () => {
     }
   };
 
+  if (!identity) {
+    return (
+      <TenantPortalLanding
+        units={units}
+        onComplete={(next) => setIdentity(next)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Portal Navigation */}
-      <div className="flex gap-8 border-b border-app-border overflow-x-auto pb-px">
-        {[
-          { id: 'mailbox', label: 'Mailbox Hub', icon: Mail },
-          { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
-          { id: 'info-nook', label: 'Info Nook', icon: Info },
-          { id: 'support', label: 'Support Hub', icon: MessageSquare },
-          { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-          { id: 'security', label: 'Security', icon: ShieldCheck },
-          { id: 'refer', label: 'Refer a Friend', icon: Users },
-          { id: 'settings', label: 'Notifications', icon: Bell }
-        ].map((tab) => (
-          <button 
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2 pb-4 text-sm font-bold uppercase tracking-widest transition-all relative whitespace-nowrap ${activeTab === tab.id ? 'text-app-accent' : 'text-app-text/40 hover:text-app-text'}`}
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-app-border pb-px">
+        <div className="flex gap-8 overflow-x-auto">
+          {[
+            { id: 'mailbox', label: 'Mailbox Hub', icon: Mail },
+            { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
+            { id: 'info-nook', label: 'Info Nook', icon: Info },
+            { id: 'support', label: 'Support Hub', icon: MessageSquare },
+            { id: 'maintenance', label: 'Maintenance', icon: Wrench },
+            { id: 'security', label: 'Security', icon: ShieldCheck },
+            { id: 'refer', label: 'Refer a Friend', icon: Users },
+            { id: 'settings', label: 'Notifications', icon: Bell }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 pb-4 text-sm font-bold uppercase tracking-widest transition-all relative whitespace-nowrap ${activeTab === tab.id ? 'text-app-accent' : 'text-app-text/40 hover:text-app-text'}`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+              {activeTab === tab.id && <motion.div layoutId="activeTenantTab" className="absolute bottom-0 left-0 right-0 h-1 bg-app-accent" />}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3 pb-4 text-[10px] font-bold uppercase tracking-widest">
+          <span className="px-3 py-1.5 rounded-full bg-app-accent/10 border border-app-accent/30 text-app-accent">
+            Unit {identity.unit}
+          </span>
+          <button
+            type="button"
+            onClick={handleSwitchUnit}
+            className="text-app-text/40 hover:text-app-text transition-colors"
           >
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
-            {activeTab === tab.id && <motion.div layoutId="activeTenantTab" className="absolute bottom-0 left-0 right-0 h-1 bg-app-accent" />}
+            Switch unit
           </button>
-        ))}
+        </div>
       </div>
 
       <AnimatePresence>
